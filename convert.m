@@ -21,28 +21,9 @@ function convert()
 
     rgb=imread(fileName);
     
-    figure(1);
-    
-    clf;
-    
-    imshow(rgb);
-    
-    [X_no_dither,map]= rgb2ind(rgb,nColors,'nodither');
-    
-    figure(2), imshow(X_no_dither,map);
-    title(fileName);
-    
-       
     isWhiteColor = ones(nColors,1);
     
-    figure(1);
-    [X_no_dither,map]= rgb2ind(rgb,nColors,'nodither');
-    whiteColors = find(isWhiteColor == 1);
-    for i = 1:length(whiteColors)
-        map(whiteColors(i),1:3) = [1, 1, 1];
-    end
-    figure(3), imshow(X_no_dither,map);
-    title(fileName);
+    update_figures(rgb, nColors, isWhiteColor)
     
     reply = [];
     
@@ -93,14 +74,7 @@ function convert()
                     reply = [];
                     
                 case 'p'
-                    figure(1);
-                    [X_no_dither,map]= rgb2ind(rgb,nColors,'nodither');
-                    whiteColors = find(isWhiteColor == 1);
-                    for i = 1:length(whiteColors)
-                        map(whiteColors(i),1:3) = [1, 1, 1];
-                    end
-                    figure(3), imshow(X_no_dither,map);
-                    title(fileName);
+                    update_figures(rgb, nColors, isWhiteColor)
                     reply = [];
                     
                 case 's'
@@ -111,34 +85,32 @@ function convert()
                     layer = fileName(idx(i)+1:idx(i+1)-1);
                     base = fileName(1:idx(i)-1);
                     idx = find(isWhiteColor == 0);
-                    nColors = length(idx);
-                    outFileName = sprintf('%s_%s_16colors_%s_%dcolors.png', base, layer, neurite, nColors);
+                    nOutColors = length(idx);
+                    
+                    outFileName = sprintf('%s_%s_16colors_%s_%dcolors.png', base, layer, neurite, nOutColors);
                     figure(3);
                     orient(gcf, 'portrait');
                     print(gcf, '-dpng', outFileName);
+                    
                     for i = 1:nColors
                         isWhiteColor(i) = ~isWhiteColor(i);
                     end
-                    figure(1);
-                    [X_no_dither,map]= rgb2ind(rgb,nColors,'nodither');
-                    whiteColors = find(isWhiteColor == 1);
-                    for i = 1:length(whiteColors)
-                        map(whiteColors(i),1:3) = [1, 1, 1];
-                    end
-                    outFileNameInverted = sprintf('%s_%s_16colors_%s_%dcolors_inverted.png', base, layer, neurite, nColors);
-                    figure(3), imshow(X_no_dither,map);
+                    update_figures(rgb, nColors, isWhiteColor)
+
+                    outFileNameInverted = sprintf('%s_%s_16colors_%s_%dcolors_inverted.png', base, layer, neurite, nOutColors);
                     title(fileName);
                     orient(gcf, 'portrait');
                     print(gcf, '-dpng', outFileNameInverted);
+                    
                     reply = [];
                     
                     
                 case 'x'
-                    histogramStr = sprintf('%s_%s_16colors_%s_%dcolors.txt', base, layer, neurite, nColors);
-                    commandStr = sprintf('convert %s_%s_16colors_%s_%dcolors.png -format %%c histogram:info:%s', base, layer, neurite, nColors, histogramStr);
+                    histogramStr = sprintf('%s_%s_16colors_%s_%dcolors.txt', base, layer, neurite, nOutColors);
+                    commandStr = sprintf('convert %s_%s_16colors_%s_%dcolors.png -format %%c histogram:info:%s', base, layer, neurite, nOutColors, histogramStr);
                     status = system(commandStr);
-                    histogramInvertedStr = sprintf('%s_%s_16colors_%s_%dcolors_inverted.txt', base, layer, neurite, nColors);
-                    commandStr = sprintf('convert %s_%s_16colors_%s_%dcolors_inverted.png -format %%c histogram:info:%s', base, layer, neurite, nColors, histogramInvertedStr);
+                    histogramInvertedStr = sprintf('%s_%s_16colors_%s_%dcolors_inverted.txt', base, layer, neurite, nOutColors);
+                    commandStr = sprintf('convert %s_%s_16colors_%s_%dcolors_inverted.png -format %%c histogram:info:%s', base, layer, neurite, nOutColors, histogramInvertedStr);
                     status = system(commandStr);
                     
                     fid = fopen(histogramInvertedStr, 'r');
