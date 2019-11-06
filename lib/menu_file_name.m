@@ -56,7 +56,7 @@ function [fileName, reply] = menu_file_name(HippFileNames)
                     end
                     
                 case '!'
-                    fileName = '';
+                    fileName = '!';
                     
                 otherwise
                     reply = [];

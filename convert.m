@@ -1,196 +1,159 @@
 function convert()
 
+    addpath data lib
+    
     nColors = 16;
+    directory = './data/';
+    suffix = 'png';
     
-    pngFileNames = dir('*.png');
-    nPngFileNames = length(pngFileNames);
-    for i=1:nPngFileNames
-        allPngFileNames{i,1} = pngFileNames(i).name;
-    end
+    [fileName] = get_file_name(directory, suffix);
+      
+    if ~strcmp(fileName, '!')
         
-    nAllPngFileNames = length(allPngFileNames);
- 
-    if (nAllPngFileNames == 1)
-        fileName = allPngFileNames{1};
-    elseif (nAllPngFileNames > 1)
-        [fileName, reply] = menu_file_name(allPngFileNames);
-        if strcmp(reply, '!')
-            return
-        end
-    end
+        [base, layer, neurite] = parse_file_name(fileName);
+    
+        [rgb, isRemoveColor, isCarouselMode, X, map, hMark] = initialize_figure(fileName, nColors);
 
-    rgb=imread(fileName);
-    
-    isRemoveColor = ones(nColors,1);
-    
-    update_figures(rgb, nColors, isRemoveColor)
-    
-    reply = [];
-    
-    % main loop to display menu choices and accept input
-    % terminates when user chooses to exit
-    while (isempty(reply))
-        %% display menu %%
+        reply = [];
         
-        clc;
+        nLayers = 0;
         
-        strng = sprintf('Please enter a selection from the menu below ');
-        disp(strng);
-
-        for i = 1:nColors
-            strng = sprintf('        %2d) Remove color #%d?: %s', i, i, bin2str(isRemoveColor(i)));
+        % main loop to display menu choices and accept input
+        % terminates when user chooses to exit
+        while (isempty(reply))
+            %% display menu %%
+            
+            clc;
+            
+            hMarkNo = length(find(hMark > 0));
+            
+            strng = sprintf('Please enter a selection from the menu below ');
             disp(strng);
-        end
-        
-        disp('         f) Flip all toggles');
-
-        disp('         p) Plot figure');
-
-        disp('         s) Save figure and inverted figure');
-
-        disp('         x) Execute conversion of figures to histograms');
-
-        disp('         !) Exit');
-        
-        reply = lower(input('\nYour selection: ', 's'));
-
-        isEnterSwitch = 1;
-        for i = 1:nColors
-            if (str2double(reply) == i)
-                isRemoveColor(i) = ~isRemoveColor(i);
-                isEnterSwitch = 0;
-                reply = [];
+            
+            for i = 1:nColors
+                strng = sprintf('        %2d) Remove color #%d?: %s', i, i, bin2str(isRemoveColor(i)));
+                disp(strng);
             end
-        end
-        
-        if isEnterSwitch
-
-            switch reply
+            
+            disp('         c) Carousel mode (type ''m'' to mark color channel)');
+            
+            disp('         e) Export to an Excel file');
+            
+            disp('         f) Flip all toggles');
+            
+            strng = sprintf('         h) Display histogram of the %d marked color channels', hMarkNo);
+            disp(strng);
+            
+            disp('         l) Load a new .PNG figure file');
+            
+            strng = sprintf('         m) Set all %d marked color-channel responses to NO', hMarkNo);
+            disp (strng);
+            
+            disp('         n) Set all 16 responses to NO');
+            
+            disp('         p) Plot figure');
+            
+            disp('         s) Save figure and inverted figure');
+            
+            disp('         x) Execute conversion of figure to a histogram');
+            
+            disp('         !) Exit');
+            
+            reply = lower(input('\nYour selection: ', 's'));
+            
+            isEnterSwitch = 1;
+            for i = 1:nColors
+                if (str2double(reply) == i)
+                    isRemoveColor(i) = ~isRemoveColor(i);
+                    isEnterSwitch = 0;
+                    reply = [];
+                end
+            end
+            
+            if isEnterSwitch
                 
-                case 'f'
-                    for i = 1:nColors
-                        isRemoveColor(i) = ~isRemoveColor(i);
-                    end
-                    reply = [];
+                switch reply
                     
-                case 'p'
-                    update_figures(rgb, nColors, isRemoveColor)
-                    reply = [];
+                    case ''
+                        disp('YO');
+                        reply = [];
                     
-                case 's'
-                    idx = find(fileName == '_');
-                    i = length(idx);
-                    neurite = fileName(idx(i)+1:idx(i)+2);
-                    i = i - 2;
-                    layer = fileName(idx(i)+1:idx(i+1)-1);
-                    base = fileName(1:idx(i)-1);
-                    idx = find(isRemoveColor == 0);
-                    nOutColors = length(idx);
-                    
-                    outFileName = sprintf('%s_%s_%dcolors_%s_%dcolors.png', base, layer, nColors, neurite, nOutColors);
-                    figure(3);
-                    orient(gcf, 'portrait');
-                    print(gcf, '-dpng', outFileName);
-                    
-                    for i = 1:nColors
-                        isRemoveColor(i) = ~isRemoveColor(i);
-                    end
-                    update_figures(rgb, nColors, isRemoveColor)
-
-                    outFileNameInverted = sprintf('%s_%s_%dcolors_%s_%dcolors_inverted.png', base, layer, nColors, neurite, nOutColors);
-                    title(fileName);
-                    orient(gcf, 'portrait');
-                    print(gcf, '-dpng', outFileNameInverted);
-                    
-                    for i = 1:nColors
-                        isRemoveColor(i) = ~isRemoveColor(i);
-                    end
-                    update_figures(rgb, nColors, isRemoveColor)
-
-                    reply = [];
-                                       
-                case 'x'
-                    histogramStr = sprintf('%s_%s_%dcolors_%s_%dcolors.txt', base, layer, nColors, neurite, nOutColors);
-                    commandStr = sprintf('convert %s_%s_%dcolors_%s_%dcolors.png -format %%c histogram:info:%s', base, layer, nColors, neurite, nOutColors, histogramStr);
-                    status = system(commandStr);
-                    
-                    histogramInvertedStr = sprintf('%s_%s_%dcolors_%s_%dcolors_inverted.txt', base, layer, nColors, neurite, nOutColors);
-                    commandStr = sprintf('convert %s_%s_%dcolors_%s_%dcolors_inverted.png -format %%c histogram:info:%s', base, layer, nColors, neurite, nOutColors, histogramInvertedStr);
-                    status = system(commandStr);
-                    
-                    listFileName = sprintf('%s_%s_%dcolors_%s_%dcolors_list.txt', base, layer, nColors, neurite, nOutColors);
-                    fid = fopen(listFileName, 'w');
-                    for i = 1:nColors
-                        if ~isRemoveColor(i)
-                            fprintf(fid, '%d\n', i);
+                    case 'c' % carousel mode
+                        [isRemoveColor,isCarouselMode,hMark,X,map] = carousel_mode(X,map,nColors,rgb);
+                        reply = [];
+                        
+                    case 'e' % export to an Excel file
+                        nLayers = nLayers + 1;
+                        nPixelsExport(nLayers) = nPixelsTotal;
+                        subregionsExport(nLayers) = menu_subregion();
+                        export_to_excel(nColors, nPixelsExport, subregionsExport, base, layer, neurite, isRemoveColor);
+                        reply = [];
+                        
+                    case 'f' % flip all toggles
+                        for i = 1:nColors
+                            isRemoveColor(i) = ~isRemoveColor(i);
                         end
-                    end
-                    fclose(fid);
-                    
-                    fid = fopen(histogramInvertedStr, 'r');
-                    backgroundInverted = textscan(fid, '%d: (%d, %d, %d) #%s %s');
-                    fclose(fid);
-                    
-                    backgroundColorInvertedStr = cell2mat(backgroundInverted{6}(1));
-                    
-                    disp(' ');
-                    
-                    if strcmp(backgroundColorInvertedStr, 'black')
+                        reply = [];
+                        
+                    case 'h' % display histogram of marked color channels
+                        nPixelsTotal = display_histogram_of_marked_color_channels(hMark);
+                        reply = [];
+                        
+                    case 'l' % load new .PNG figure file
+                        [fileName] = get_file_name(directory, suffix);
+                        [base, layer, neurite] = parse_file_name(fileName);
+                        [rgb, isRemoveColor, isCarouselMode, X, map, hMark] = initialize_figure(fileName, nColors);
 
-                        backgroundCountInverted = backgroundInverted{1}(1);
+                        reply = [];
                         
-%                         strng = sprintf('inverted background count = %d', backgroundInverted{1}(1));
-%                         strng = sprintf('%s  %s', strng, cell2mat(backgroundInverted{6}(1)));
-%                         disp(strng);
+                    case 'm' % set all marked responses to NO
+                        isRemoveColor = ~hMark;
+                        reply = [];
                         
-                        fid = fopen(histogramStr, 'r');
-                        backgroundCell = textscan(fid, '%d: (%d, %d, %d) #%s %s');
+                    case 'n' % set all 16 responses to NO
+                        isRemoveColor = zeros(nColors,1);
+                        reply = [];
+                        
+                    case 'p' % plot figure
+                        [X, map] = update_figures(rgb, nColors, isRemoveColor, isCarouselMode);
+                        reply = [];
+                        
+                    case 's' % save figure and its inverse
+                        [isRemoveColor,X,map] = save_figures(isRemoveColor,rgb,nColors,isCarouselMode,base,layer,neurite);
+                                               
+                        reply = [];
+                        
+                    case 'x' % Execute conversion of figure to a histogram
+                        idx = find(isRemoveColor == 0);
+                        nOutColors = length(idx);
+                        
+                        nPixelsTotal = display_histogram_of_marked_color_channels(hMark);
+                        
+                        listFileName = sprintf('%s_%s_%dcolors_%s_%dcolors_list.txt', base, layer, nColors, neurite, nOutColors);
+                        fid = fopen(listFileName, 'w');
+                        for i = 1:nColors
+                            if ~isRemoveColor(i)
+                                fprintf(fid, '%d\n', i);
+                            end
+                        end
                         fclose(fid);
                         
-                        backgroundColorStr = cell2mat(backgroundCell{6}(1));
-                        backgroundCount = backgroundCell{1}(1);
+                        reply = [];
                         
-                        if strcmp(backgroundColorStr, 'black')
-                           
-                            if (backgroundCount < backgroundCountInverted)
-                                disp('*** Regular background count is less than inverted background count! ***');
-                            else
-                                disp(['background count = ', num2str(backgroundCountInverted)]);
-                                % sum = sum(all counts) - white counts - inverted black counts
-                                summedCount = sum(backgroundCell{1})-backgroundCell{1}(end)-backgroundCountInverted;
-                                disp(['summed count = ', num2str(summedCount)]);
-                            end
-                            
-                        else
+                    case '!'
+                        %exit
                         
-%                             strng = sprintf('regular background count = %d  %s', backgroundCell{1}(1), cell2mat(backgroundCell{6}(1)));
-%                             disp(strng);
-                            
-                            disp('backgound count = 0');
-                            % sum = sum(all counts) - white counts
-                            summedCount = sum(backgroundCell{1})-backgroundCell{1}(end);
-                            disp(['summed count = ', num2str(summedCount)]);
-                            
-                        end
-                    
-                    else
+                    otherwise
+                        reply = [];
                         
-                        disp('*** Inverted background color is not black! ***');
-                        
-                    end
-                    
-                case '!'
-                    %exit
-                    
-                otherwise
-                    reply = [];
-                    
-            end % switch
-        
-        end % if isEnterSwitch
+                end % switch
+                
+            end % if isEnterSwitch
             
-    end % while loop
+        end % while loop
 
+    end % if ~strcmp(fileName, '!')
+        
     clean_exit()% exit
     
-end
+end % convert()
